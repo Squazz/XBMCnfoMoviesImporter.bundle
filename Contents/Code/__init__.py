@@ -693,8 +693,9 @@ class XBMCNFO(PlexAgent):
                         pass
                     if add_ratings:
                         # keep tally of votes so we can choose the top voted rating
-                        audience_votes = -1
-                        critic_votes = -1
+                        best_audience_votes = -1
+                        best_critic_votes = -1
+                        total_votes = -1
                         
                         # average out scores
                         audience_score_total = 0.0
@@ -702,6 +703,17 @@ class XBMCNFO(PlexAgent):
                         critic_score_total = 0.0
                         critic_ratings_found = 0
                         
+                        #track the best and nextbest critic and audience
+                        best_audience_rating = -1
+                        best_critic_rating = -1
+                        best_audience_image = -1
+                        best_critic_image = -1
+
+                        nextbest_audience_rating = -1
+                        nextbest_critic_rating = -1
+                        nextbest_audience_image = -1
+                        nextbest_critic_image = -1
+
                         # track default='true' attribute
                         audience_default_found = False
                         critic_default_found = False
@@ -754,7 +766,9 @@ class XBMCNFO(PlexAgent):
                                             if rating_info['type'] == 'critic' and critic_default_found == False:
                                                 critic_ratings_found += 1
                                                 critic_score_total += add_rating_value
-                                                
+                                                total_votes += add_votes
+                                                metadata.rating_count = total_votes
+
                                                 if rating_default == True: # use default provider for rating
                                                     critic_default_found = True
                                                     log.debug("Critic Default rating set, will not average scores")
@@ -763,24 +777,32 @@ class XBMCNFO(PlexAgent):
                                                     log.debug("Average Critic Score: " + str(add_rating_value))
                                                 
                                                 # use image from default or rating with most votes
-                                                if (add_votes > critic_votes or rating_default == True) and rating_info['image_good'] and rating_info['image_bad']:
+                                                if (add_votes > best_critic_votes or rating_default == True) and rating_info['image_good'] and rating_info['image_bad']:
+                                                    best_critic_votes = add_votes
+
                                                     if add_rating_value >= rating_info['score_good']:
                                                         metadata.rating_image = rating_info['image_good']
                                                     else:
                                                         metadata.rating_image = rating_info['image_bad']
 
-                                                metadata.rating = add_rating_value
-                                                metadata.rating_count = add_votes
+                                                    nextbest_critic_rating = best_critic_rating
+                                                    nextbest_critic_image = best_critic_image
 
-                                                # This seems excessive. If no audience ratings are found, don't set them
-                                                if audience_ratings_found == 0:
-                                                    log.debug("No Audience ratings found, setting them based on Critic Rating in case none provided")
-                                                    metadata.audience_rating = 0.0
-                                                    metadata.audience_rating_image = ''
+                                                    best_critic_image = metadata.rating_image
+                                                    best_critic_rating = add_rating_value
+
+                                                metadata.rating = best_critic_rating
+
+                                                if audience_ratings_found == 0 and audience_ratings_found > 1:
+                                                    log.debug("No Audience ratings found, and we have more than one critic, setting them based on Critic Rating in case none provided")
+                                                    metadata.audience_rating = nextbest_critic_rating
+                                                    metadata.audience_rating_image = nextbest_critic_image
 
                                             elif rating_info['type'] == 'audience' and audience_default_found == False:
                                                 audience_ratings_found += 1
                                                 audience_score_total += add_rating_value
+                                                total_votes += add_votes 
+                                                metadata.rating_count = total_votes #audience_rating_count doesn't exist
                                                 
                                                 if rating_default == True: # use default provider for rating
                                                     critic_default_found = True
@@ -790,20 +812,26 @@ class XBMCNFO(PlexAgent):
                                                     log.debug("Average Audience Score: " + str(add_rating_value))
                                                 
                                                 # use image from default or rating with most votes
-                                                if (add_votes > audience_votes or rating_default == True) and rating_info['image_good'] and rating_info['image_bad']:
+                                                if (add_votes > best_audience_votes or rating_default == True) and rating_info['image_good'] and rating_info['image_bad']:
+                                                    best_audience_votes = add_votes
+
                                                     if add_rating_value >= rating_info['score_good']:
                                                         metadata.audience_rating_image = rating_info['image_good']
                                                     else:
                                                         metadata.audience_rating_image = rating_info['image_bad']
+
+                                                    nextbest_audience_rating = best_audience_rating
+                                                    nextbest_audience_image = best_audience_image
+
+                                                    best_audience_rating = add_rating_value
+                                                    best_audience_image = metadata.audience_rating_image
                                                 
-                                                metadata.audience_rating = add_rating_value
-                                                metadata.rating_count = add_votes #audience_rating_count doesn't exist
+                                                metadata.audience_rating = best_audience_rating
                                                 
-                                                # This seems excessive. If no critic ratings are found, don't set them
-                                                if critic_ratings_found == 0:
-                                                    log.debug("No Critic ratings found, setting them based on Audience Rating in case none provided")
-                                                    metadata.rating = 0.0
-                                                    metadata.rating_image = ''
+                                                if critic_ratings_found == 0 and critic_ratings_found > 1:
+                                                    log.debug("No Critic ratings found, and we have more than one audience, setting them based on latest Audience Rating in case none provided")
+                                                    metadata.rating = nextbest_audience_rating
+                                                    metadata.rating_image = nextbest_audience_image
 
                                             rating_value = rating_value + rating_info['append_text_to_score']
                                             
