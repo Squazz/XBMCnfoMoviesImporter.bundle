@@ -768,14 +768,15 @@ class XBMCNFO(PlexAgent):
                                                         metadata.rating_image = rating_info['image_good']
                                                     else:
                                                         metadata.rating_image = rating_info['image_bad']
-                                                
+
                                                 metadata.rating = add_rating_value
                                                 metadata.rating_count = add_votes
 
+                                                # This seems excessive. If no audience ratings are found, don't set them
                                                 if audience_ratings_found == 0:
                                                     log.debug("No Audience ratings found, setting them based on Critic Rating in case none provided")
-                                                    metadata.audience_rating = metadata.rating
-                                                    metadata.audience_rating_image = metadata.rating_image
+                                                    metadata.audience_rating = 0.0
+                                                    metadata.audience_rating_image = ''
 
                                             elif rating_info['type'] == 'audience' and audience_default_found == False:
                                                 audience_ratings_found += 1
@@ -798,10 +799,11 @@ class XBMCNFO(PlexAgent):
                                                 metadata.audience_rating = add_rating_value
                                                 metadata.rating_count = add_votes #audience_rating_count doesn't exist
                                                 
+                                                # This seems excessive. If no critic ratings are found, don't set them
                                                 if critic_ratings_found == 0:
                                                     log.debug("No Critic ratings found, setting them based on Audience Rating in case none provided")
-                                                    metadata.rating = metadata.audience_rating
-                                                    metadata.rating_image = metadata.audience_rating_image
+                                                    metadata.rating = 0.0
+                                                    metadata.rating_image = ''
 
                                             rating_value = rating_value + rating_info['append_text_to_score']
                                             
@@ -1123,6 +1125,13 @@ class XBMCNFO(PlexAgent):
             else:
                 log.info('ERROR: No <movie> tag in {nfo}.'
                          ' Aborting!'.format(nfo=nfo_file))
+
+            log.info('Ratings')
+            log.info(metadata.rating)
+            log.info(metadata.rating_image)
+            log.info('Audience Ratings')
+            log.info(metadata.audience_rating)
+            log.info(metadata.audience_rating_image)
             return metadata
 
 xbmcnfo = XBMCNFO
